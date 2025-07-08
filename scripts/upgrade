@@ -28,7 +28,50 @@ ynh_script_progression "Ensuring downward compatibility..."
 #=================================================
 ynh_script_progression "Upgrading source files..."
 
-ynh_setup_source --dest_dir="$install_dir" --keep=".env"
+if ynh_app_upgrading_from_version_before 2.0.0~ynh1
+then
+    current_version="${YNH_APP_CURRENT_VERSION/~ynh*/}"
+    current_major_version=${current_version%%.*}
+else
+    current_version=$(grep module.exports "$install_dir/version.js" | cut -d\' -f2)
+    current_major_version=${current_version%%.*}
+fi
+
+last_version=$(ynh_read_manifest "resources.sources.main.url" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+')
+last_major_version=${last_version%%.*}
+
+if [[ "$last_major_version" != "$current_major_version" ]]
+then
+    last_minor_version=$(ynh_read_manifest "resources.sources.v$current_major_version.url" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+')
+    
+    if [[ "$last_minor_version" != "$current_version" ]]
+    then
+        ynh_print_info "Upgrading to Planka $last_minor_version"
+        ynh_setup_source --dest_dir="$install_dir" --source_id="$current_major_version" --keep=".env"
+    else
+        ynh_print_info "Upgrading to Planka $last_minor_version"
+        # Create a temporary directory
+        tmpdir="${install_dir}__tmp_upgrade"
+
+        # Download, check integrity, uncompress and patch the source from manifest.toml
+        ynh_setup_source --dest_dir="$tmpdir"
+
+        # Copy required files from the previous version
+        cp -a "$install_dir/.env" "$tmpdir/"
+        cp -a "$install_dir/public/user-avatars/." "$tmpdir/public/user-avatars/"
+        cp -a "$install_dir/public/project-background-images/." "$tmpdir/public/background-images/"
+        cp -a "$install_dir/private/attachments/." "$tmpdir/public/attachments/"
+
+        # Replace the old Planka by the new one
+        ynh_safe_rm "$install_dir"
+        mv "$tmpdir" "$install_dir"
+        
+	# Fix app ownerships & permissions
+	chown -R $app:$app "$install_dir"
+    fi
+else
+    ynh_setup_source --dest_dir="$install_dir" --keep=".env"
+fi
 
 #=================================================
 # INSTALL DEPENDENCIES
@@ -62,8 +105,13 @@ ynh_config_add_fail2ban --logpath="$install_dir/logs/planka.log" --failregex="^(
 ynh_script_progression "Installing $app..."
 
 pushd $install_dir
-	ynh_hide_warnings ynh_exec_as_app npm install
-	ynh_hide_warnings ynh_exec_as_app npm run db:init
+    ynh_hide_warnings ynh_exec_as_app npm install
+	
+    if [[ "$last_major_version" != "$current_major_version" ]]; then
+        ynh_hide_warnings ynh_exec_as_app npm run db:upgrade
+    fi
+    
+    ynh_hide_warnings ynh_exec_as_app npm run db:init
 popd
 
 #=================================================
