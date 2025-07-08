@@ -28,7 +28,7 @@ ynh_script_progression "Ensuring downward compatibility..."
 #=================================================
 ynh_script_progression "Upgrading source files..."
 
-ynh_setup_source --dest_dir="$install_dir" --keep=".env"
+ynh_setup_source --dest_dir="$install_dir" --keep=".env public/user-avatars public/project-background-images private/attachments" --full_replace=1
 
 #=================================================
 # INSTALL DEPENDENCIES
@@ -63,6 +63,7 @@ ynh_script_progression "Installing $app..."
 
 pushd $install_dir
 	ynh_hide_warnings ynh_exec_as_app npm install
+	ynh_hide_warnings ynh_exec_as_app npm run db:upgrade
 	ynh_hide_warnings ynh_exec_as_app npm run db:init
 popd
 
