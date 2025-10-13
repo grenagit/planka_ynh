@@ -14,12 +14,10 @@ source /usr/share/yunohost/helpers
 secret=$(ynh_string_random --length=50)
 email=$(ynh_user_get_info --username=$admin --key=mail)
 timezone="$(timedatectl show --value --property=Timezone)"
-firstname=$(yunohost user list --fields firstname --output-as json | jq -r .users.$admin.firstname)
-lastname=$(yunohost user list --fields lastname --output-as json | jq -r .users.$admin.lastname)
+firstname=$(yunohost user list --fields fullname --output-as json | jq -r .users.$admin.fullname)
 
 ynh_app_setting_set --key=password --value="$password"
-ynh_app_setting_set --key=firstname --value=$firstname
-ynh_app_setting_set --key=lastname --value=$lastname
+ynh_app_setting_set --key=fullname --value=$fullname
 
 #=================================================
 # DOWNLOAD, CHECK AND UNPACK SOURCE
