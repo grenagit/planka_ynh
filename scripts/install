@@ -5,7 +5,6 @@
 # IMPORT GENERIC HELPERS
 #=================================================
 
-source _common.sh
 source /usr/share/yunohost/helpers
 
 #=================================================
@@ -14,13 +13,11 @@ source /usr/share/yunohost/helpers
 
 secret=$(ynh_string_random --length=50)
 email=$(ynh_user_get_info --username=$admin --key=mail)
-timezone="$(cat /etc/timezone)"
-firstname=$(yunohost user list --fields firstname --output-as json | jq -r .users.$admin.firstname)
-lastname=$(yunohost user list --fields lastname --output-as json | jq -r .users.$admin.lastname)
+timezone="$(timedatectl show --value --property=Timezone)"
+firstname=$(yunohost user list --fields fullname --output-as json | jq -r .users.$admin.fullname)
 
 ynh_app_setting_set --key=password --value="$password"
-ynh_app_setting_set --key=firstname --value=$firstname
-ynh_app_setting_set --key=lastname --value=$lastname
+ynh_app_setting_set --key=fullname --value=$fullname
 
 #=================================================
 # DOWNLOAD, CHECK AND UNPACK SOURCE
@@ -29,13 +26,6 @@ ynh_script_progression "Setting up source files..."
 
 # Download, check integrity, uncompress and patch the source from manifest.toml
 ynh_setup_source --dest_dir="$install_dir"
-
-#=================================================
-# INSTALL DEPENDENCIES
-#=================================================
-ynh_script_progression "Installing dependencies..."
-
-ynh_nodejs_install
 
 #=================================================
 # APP INITIAL CONFIGURATION
@@ -54,6 +44,7 @@ ynh_config_add_nginx
 
 # Create a dedicated systemd config
 ynh_config_add_systemd
+
 yunohost service add "$app" --description="Realtime kanban board for workgroups" --log="/var/log/$app/$app.log"
 
 # Create a dedicated Fail2Ban config
