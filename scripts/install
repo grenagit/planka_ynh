@@ -15,6 +15,7 @@ secret=$(ynh_string_random --length=50)
 email=$(ynh_user_get_info --username=$admin --key=mail)
 timezone="$(timedatectl show --value --property=Timezone)"
 firstname=$(yunohost user list --fields fullname --output-as json | jq -r .users.$admin.fullname)
+fullname=$(ynh_user_get_info --username=$admin --key=fullname)
 
 ynh_app_setting_set --key=password --value="$password"
 ynh_app_setting_set --key=fullname --value=$fullname
